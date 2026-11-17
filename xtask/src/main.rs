@@ -1,8 +1,10 @@
-//! `cargo xtask ci`     fmt, clippy (desktop + wasm), tests, layers, cargo-deny
+//! `cargo xtask ci`     fmt, clippy (desktop + wasm), tests, layers, unsafe, cargo-deny, wasm build
 //! `cargo xtask layers` checks docs/layers.md
+//! `cargo xtask unsafe` checks that only flappy-web-storage allows `unsafe`
 //! `cargo xtask wasm`   builds the browser version into dist/
 
 mod layers;
+mod unsafe_code;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -24,8 +26,9 @@ fn main() -> ExitCode {
     {
         ["ci"] => ci(),
         ["layers"] => check_layers(),
+        ["unsafe"] => check_unsafe(),
         ["wasm"] => wasm(),
-        _ => Err("usage: cargo xtask <ci|layers|wasm>".to_owned()),
+        _ => Err("usage: cargo xtask <ci|layers|unsafe|wasm>".to_owned()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -86,7 +89,9 @@ fn ci() -> Task {
     ])?;
     cargo(&["test", "--workspace", "--locked"])?;
     check_layers()?;
-    deny()
+    check_unsafe()?;
+    deny()?;
+    wasm()
 }
 
 fn deny() -> Task {
@@ -114,6 +119,42 @@ fn check_layers() -> Task {
         eprintln!("  {violation}");
     }
     Err(format!("{} layer violation(s)", violations.len()))
+}
+
+fn rust_files(dir: &Path) -> Result<Vec<(String, String)>, String> {
+    let entries = std::fs::read_dir(dir).map_err(|error| format!("{}: {error}", dir.display()))?;
+    entries
+        .map(|entry| entry.map_err(|error| error.to_string()))
+        .map(|entry| {
+            let path = entry?.path();
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default();
+            if path.is_dir() && name != "target" {
+                return rust_files(&path);
+            }
+            if name == "Cargo.toml" || path.extension().is_some_and(|extension| extension == "rs") {
+                let content = std::fs::read_to_string(&path)
+                    .map_err(|error| format!("{}: {error}", path.display()))?;
+                return Ok(vec![(path.display().to_string(), content)]);
+            }
+            Ok(vec![])
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(|nested| nested.into_iter().flatten().collect())
+}
+
+fn check_unsafe() -> Task {
+    let violations = unsafe_code::violations(&rust_files(Path::new("crates"))?);
+    if violations.is_empty() {
+        eprintln!("xtask: unsafe ok");
+        return Ok(());
+    }
+    for path in &violations {
+        eprintln!("  {path} turns the unsafe_code lint off; only crates/flappy-web-storage may");
+    }
+    Err(format!("{} file(s) allow unsafe code", violations.len()))
 }
 
 fn miniquad_js() -> Result<PathBuf, String> {
@@ -170,6 +211,7 @@ fn wasm() -> Task {
     copy(&miniquad_js()?, &dist.join("gl.js"))?;
     copy(Path::new("web/index.html"), &dist.join("index.html"))?;
     copy(Path::new("web/boot.js"), &dist.join("boot.js"))?;
+    copy(Path::new("web/storage.js"), &dist.join("storage.js"))?;
     eprintln!(
         "xtask: {DIST}/ ready, serve it with any static server (e.g. python3 -m http.server -d {DIST})"
     );

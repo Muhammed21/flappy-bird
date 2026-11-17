@@ -1,5 +1,6 @@
-use flappy_client::{Area, Session, VIEW_HEIGHT, VIEW_WIDTH, visible_area};
+use flappy_client::{Area, Records, Session, VIEW_HEIGHT, VIEW_WIDTH, visible_area};
 use flappy_core::{Config, Phase};
+use flappy_storage::Store;
 use macroquad::prelude::{
     BLACK, Camera2D, Color, Conf, KeyCode, MouseButton, Rect, WHITE, clear_background, draw_circle,
     draw_rectangle, draw_text, get_frame_time, is_key_pressed, is_mouse_button_pressed,
@@ -13,6 +14,7 @@ const BIRD: Color = Color::new(0.98, 0.82, 0.19, 1.0);
 
 const TAP_TO_FLY: &str = "Espace ou clic pour voler";
 const TAP_TO_RETRY: &str = "Espace ou clic pour rejouer";
+const BEST: &str = "Meilleur";
 
 fn window_conf() -> Conf {
     Conf {
@@ -30,6 +32,34 @@ fn flapped() -> bool {
         .into_iter()
         .any(is_key_pressed)
         || is_mouse_button_pressed(MouseButton::Left)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn store() -> Box<dyn Store> {
+    Box::new(flappy_web_storage::WebStore)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn store() -> Box<dyn Store> {
+    match flappy_storage::data_dir(std::env::consts::OS, |name| std::env::var(name).ok()) {
+        Some(dir) => Box::new(flappy_storage::FileStore::new(dir)),
+        None => Box::new(Nowhere),
+    }
+}
+
+/// No place to save: the best score lasts for this session only.
+#[cfg(not(target_arch = "wasm32"))]
+struct Nowhere;
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Store for Nowhere {
+    fn read(&self) -> Option<String> {
+        None
+    }
+
+    fn write(&self, _: &str) -> std::io::Result<()> {
+        Err(std::io::Error::other("no data folder"))
+    }
 }
 
 fn seed() -> u64 {
@@ -95,8 +125,9 @@ fn draw_centered(text: &str, view_y: f32, view_size: f32, area: Area) {
     draw_text(text, x, y, size, WHITE);
 }
 
-fn draw_hud(session: &Session, area: Area) {
+fn draw_hud(session: &Session, records: &Records, area: Area) {
     let world = session.world();
+    let best = records.best_score().map(|best| format!("{BEST} : {best}"));
     match world.phase() {
         Phase::Ready => draw_centered(TAP_TO_FLY, 300.0, 18.0, area),
         Phase::Playing => draw_centered(&world.score().to_string(), 80.0, 48.0, area),
@@ -105,20 +136,26 @@ fn draw_hud(session: &Session, area: Area) {
             draw_centered(TAP_TO_RETRY, 300.0, 18.0, area);
         }
     }
+    if let (Some(best), Phase::Ready | Phase::Over) = (best, world.phase()) {
+        draw_centered(&best, 120.0, 20.0, area);
+    }
 }
 
 #[macroquad::main(window_conf)]
 async fn main() {
     let config = Config::default();
+    let store = store();
+    let mut records = Records::load(store.as_ref());
     let mut session = Session::new(config, seed());
     loop {
         session = session.frame(f64::from(get_frame_time()), flapped());
+        records = records.after_frame(&session, store.as_ref());
         let area = visible_area(screen_width(), screen_height());
 
         set_camera(&view_camera(area));
         draw_world(&session, &config, area);
         set_default_camera();
-        draw_hud(&session, area);
+        draw_hud(&session, &records, area);
 
         next_frame().await;
     }

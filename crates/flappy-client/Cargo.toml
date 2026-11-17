@@ -9,7 +9,11 @@ publish.workspace = true
 [dependencies]
 flappy-core.workspace = true
 flappy-replay.workspace = true
+flappy-storage.workspace = true
 macroquad.workspace = true
 
 [lints]
 workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+flappy-web-storage.workspace = true

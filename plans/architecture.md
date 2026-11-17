@@ -114,7 +114,8 @@ Chaque étape = un commit validé par toi avant de passer à la suivante.
 - [x] 3. Tuyaux + score (parcours dérivé de la graine, rien n'est stocké)
 - [x] 4. Client minimal jouable (desktop + navigateur)
 - [x] 5. Replay + validation de score (`flappy-replay`, `RULES_VERSION`)
-- [ ] 6. Stockage sécurisé du high score
+- [x] 6. Stockage sécurisé du high score (fichier atomique + localStorage, rejoué au chargement)
+- [ ] 7. Bench + polish
 
 ## Risques acceptés
 

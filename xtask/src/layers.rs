@@ -6,15 +6,18 @@ use serde_json::Value;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Layer {
     Core,
-    Domain,
+    Replay,
+    Storage,
+    Platform,
     App,
     Tool,
 }
 
 const LAYERS: &[(&str, Layer)] = &[
     ("flappy-core", Layer::Core),
-    ("flappy-replay", Layer::Domain),
-    ("flappy-storage", Layer::Domain),
+    ("flappy-replay", Layer::Replay),
+    ("flappy-storage", Layer::Storage),
+    ("flappy-web-storage", Layer::Platform),
     ("flappy-client", Layer::App),
     ("flappy-bench", Layer::Tool),
     ("xtask", Layer::Tool),
@@ -66,16 +69,12 @@ fn layer_of(name: &str) -> Option<Layer> {
         .map(|(_, layer)| *layer)
 }
 
-fn package_violations<'a>(
-    package: &'a Package,
-    members: &'a [Package],
-) -> impl Iterator<Item = Violation> + 'a {
+fn package_violations(package: &Package) -> impl Iterator<Item = Violation> + '_ {
     let from = layer_of(&package.name);
     package
         .deps
         .iter()
         .filter(|dep| dep.kind != DepKind::Dev)
-        .filter(|dep| members.iter().any(|member| member.name == dep.name))
         .filter(move |dep| match (from, layer_of(&dep.name)) {
             (Some(from), Some(to)) => to >= from,
             _ => false,
@@ -94,9 +93,7 @@ pub fn check(members: &[Package]) -> Vec<Violation> {
         .map(|package| Violation::Unclassified {
             krate: package.name.clone(),
         });
-    let forbidden = members
-        .iter()
-        .flat_map(|package| package_violations(package, members));
+    let forbidden = members.iter().flat_map(package_violations);
     unclassified.chain(forbidden).collect()
 }
 
@@ -212,13 +209,46 @@ mod tests {
     }
 
     #[test]
-    fn crates_of_the_same_layer_may_not_use_each_other() {
+    fn replays_may_not_know_how_they_are_stored() {
         let workspace = [
             package("flappy-replay", &[("flappy-storage", DepKind::Normal)]),
             package("flappy-storage", &[]),
         ];
 
         assert_eq!(check(&workspace).len(), 1);
+    }
+
+    #[test]
+    fn storage_may_use_replays_and_the_core() {
+        let workspace = [
+            package("flappy-core", &[]),
+            package("flappy-replay", &[("flappy-core", DepKind::Normal)]),
+            package(
+                "flappy-storage",
+                &[
+                    ("flappy-core", DepKind::Normal),
+                    ("flappy-replay", DepKind::Normal),
+                ],
+            ),
+        ];
+
+        assert_eq!(check(&workspace), vec![]);
+    }
+
+    #[test]
+    fn the_client_may_use_the_web_storage_bridge_but_not_the_reverse() {
+        let workspace = [
+            package("flappy-web-storage", &[("flappy-client", DepKind::Normal)]),
+            package("flappy-client", &[("flappy-web-storage", DepKind::Normal)]),
+        ];
+
+        assert_eq!(
+            check(&workspace),
+            vec![Violation::Forbidden {
+                from: "flappy-web-storage".to_owned(),
+                to: "flappy-client".to_owned(),
+            }]
+        );
     }
 
     #[test]
@@ -253,6 +283,27 @@ mod tests {
         let workspace = [package("flappy-core", &[("macroquad", DepKind::Normal)])];
 
         assert_eq!(check(&workspace), vec![]);
+    }
+
+    #[test]
+    fn violations_name_the_crates_and_where_the_rule_lives() {
+        let forbidden = Violation::Forbidden {
+            from: "flappy-core".to_owned(),
+            to: "flappy-client".to_owned(),
+        };
+        let unclassified = Violation::Unclassified {
+            krate: "flappy-mystery".to_owned(),
+        };
+
+        assert_eq!(
+            forbidden.to_string(),
+            "flappy-core may not depend on flappy-client (docs/layers.md)"
+        );
+        assert!(
+            unclassified
+                .to_string()
+                .starts_with("flappy-mystery has no layer")
+        );
     }
 
     #[test]

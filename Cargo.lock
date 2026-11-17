@@ -192,6 +192,8 @@ version = "0.1.0"
 dependencies = [
  "flappy-core",
  "flappy-replay",
+ "flappy-storage",
+ "flappy-web-storage",
  "macroquad",
 ]
 
@@ -208,6 +210,24 @@ version = "0.1.0"
 dependencies = [
  "flappy-core",
  "proptest",
+]
+
+[[package]]
+name = "flappy-storage"
+version = "0.1.0"
+dependencies = [
+ "flappy-core",
+ "flappy-replay",
+ "proptest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "flappy-web-storage"
+version = "0.1.0"
+dependencies = [
+ "flappy-storage",
 ]
 
 [[package]]
