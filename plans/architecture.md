@@ -110,7 +110,8 @@ Chaque étape = un commit validé par toi avant de passer à la suivante.
 ## Avancement
 
 - [x] 1. Squelette
-- [ ] 2. Core headless : oiseau, gravité, saut, sol
+- [x] 2. Core headless : oiseau, gravité, saut, plafond, sol
+- [ ] 3. Tuyaux + score
 
 ## Risques acceptés
 
