@@ -190,6 +190,7 @@ dependencies = [
 name = "flappy-client"
 version = "0.1.0"
 dependencies = [
+ "flappy-core",
  "macroquad",
 ]
 

@@ -112,7 +112,8 @@ Chaque étape = un commit validé par toi avant de passer à la suivante.
 - [x] 1. Squelette
 - [x] 2. Core headless : oiseau, gravité, saut, plafond, sol
 - [x] 3. Tuyaux + score (parcours dérivé de la graine, rien n'est stocké)
-- [ ] 4. Client minimal jouable
+- [x] 4. Client minimal jouable (desktop + navigateur)
+- [ ] 5. Replay + validation de score
 
 ## Risques acceptés
 

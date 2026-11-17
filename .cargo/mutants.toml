@@ -1,5 +1,7 @@
 # Equivalent mutants: no test can tell them apart from the original.
 exclude_re = [
     # SplitMix64's last xor-shift only changes the low 31 bits; random::unit keeps the top 24.
-    "random.rs:7:7: replace \\^ with \\|",
+    'random\.rs:7:\d+: replace \^ with \| in mix',
+    # (a - n·T) % T and (a + n·T) % T are the same remainder.
+    'session\.rs:\d+:\d+: replace - with \+ in Session::frame',
 ]
