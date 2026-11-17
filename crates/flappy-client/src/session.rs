@@ -1,4 +1,5 @@
 use flappy_core::{Config, Input, Phase, World};
+use flappy_replay::{Recorder, Replay};
 
 /// The game runs at a fixed 60 ticks per second, whatever the display's refresh rate.
 pub const TICK_SECONDS: f64 = 1.0 / 60.0;
@@ -21,6 +22,7 @@ pub struct Session {
     accumulated: f64,
     pending_flap: bool,
     ticks_over: u32,
+    recorder: Recorder,
 }
 
 impl Session {
@@ -35,6 +37,7 @@ impl Session {
             accumulated: 0.0,
             pending_flap: false,
             ticks_over: 0,
+            recorder: Recorder::new(seed),
         }
     }
 
@@ -48,6 +51,15 @@ impl Session {
         &self.previous
     }
 
+    /// The finished game's replay, once it is over.
+    #[must_use]
+    pub fn replay(&self) -> Option<Replay> {
+        match self.world.phase() {
+            Phase::Over => self.recorder.finish().ok(),
+            Phase::Ready | Phase::Playing => None,
+        }
+    }
+
     /// How far the clock is between `previous` and `world`, from 0 to 1.
     #[must_use]
     #[expect(clippy::cast_possible_truncation, reason = "a value between 0 and 1")]
@@ -56,8 +68,9 @@ impl Session {
     }
 
     /// The session after a frame that lasted `seconds`, during which the player flapped or not.
+    /// Takes the session by value so that a frame never copies the recording.
     #[must_use]
-    pub fn frame(&self, seconds: f64, flap: bool) -> Self {
+    pub fn frame(self, seconds: f64, flap: bool) -> Self {
         let seconds = if seconds.is_finite() {
             seconds.max(0.0)
         } else {
@@ -71,12 +84,12 @@ impl Session {
         let waiting = Self {
             accumulated,
             pending_flap: self.pending_flap || flap,
-            ..self.clone()
+            ..self
         };
         (0..ticks).fold(waiting, |session, _| session.tick())
     }
 
-    fn tick(&self) -> Self {
+    fn tick(self) -> Self {
         let flap = self.pending_flap;
         match self.world.phase() {
             Phase::Over if flap && self.ticks_over >= RESTART_DELAY_TICKS => {
@@ -86,16 +99,18 @@ impl Session {
                 previous: self.world.clone(),
                 pending_flap: false,
                 ticks_over: self.ticks_over + 1,
-                ..self.clone()
+                ..self
             },
-            Phase::Ready | Phase::Playing => Self {
-                previous: self.world.clone(),
-                world: self
-                    .world
-                    .step(if flap { Input::Flap } else { Input::Idle }),
-                pending_flap: false,
-                ..self.clone()
-            },
+            Phase::Ready | Phase::Playing => {
+                let input = if flap { Input::Flap } else { Input::Idle };
+                Self {
+                    previous: self.world.clone(),
+                    world: self.world.step(input),
+                    pending_flap: false,
+                    recorder: self.recorder.record(input),
+                    ..self
+                }
+            }
         }
     }
 }

@@ -22,7 +22,7 @@ fn idle_frames(session: Session, count: usize) -> Session {
 /// The session on the very tick its game ends.
 fn game_over() -> Option<Session> {
     std::iter::successors(Some(session().frame(TICK_SECONDS, true)), |session| {
-        Some(session.frame(TICK_SECONDS, false))
+        Some(session.clone().frame(TICK_SECONDS, false))
     })
     .take(1000)
     .find(|session| session.world().phase() == Phase::Over)
@@ -113,7 +113,7 @@ fn a_flap_after_the_restart_delay_starts_a_new_game_on_a_new_course() {
 fn time_beyond_the_catch_up_cap_is_dropped_rather_than_run_later() {
     let paused = session().frame(TICK_SECONDS, true).frame(10.0, false);
 
-    let next = paused.frame(0.0, false);
+    let next = paused.clone().frame(0.0, false);
 
     assert_eq!(next.world(), paused.world());
 }
@@ -125,4 +125,39 @@ fn once_the_game_is_over_the_frozen_bird_does_not_wobble() {
     let later = over.frame(TICK_SECONDS, false);
 
     assert_eq!(later.previous(), later.world());
+}
+
+#[test]
+fn a_game_in_progress_has_no_replay_yet() {
+    assert_eq!(session().frame(TICK_SECONDS, true).replay(), None);
+}
+
+#[test]
+fn a_finished_game_hands_over_a_replay_that_proves_its_score() {
+    let waited = idle_frames(session(), 30);
+    let over = std::iter::successors(Some(waited.frame(TICK_SECONDS, true)), |session| {
+        Some(session.clone().frame(TICK_SECONDS, false))
+    })
+    .take(1000)
+    .find(|session| session.world().phase() == Phase::Over)
+    .unwrap();
+
+    let replay = over.replay().unwrap();
+
+    assert_eq!(replay.seed(), SEED);
+    assert_eq!(
+        replay.verify(),
+        Ok(flappy_replay::Verified {
+            score: over.world().score()
+        })
+    );
+}
+
+#[test]
+fn a_new_game_starts_a_new_recording() {
+    let over = idle_frames(game_over().unwrap(), RESTART_DELAY_TICKS as usize);
+
+    let restarted = over.frame(TICK_SECONDS, true);
+
+    assert_eq!(restarted.replay(), None);
 }

@@ -4,4 +4,6 @@ exclude_re = [
     'random\.rs:7:\d+: replace \^ with \| in mix',
     # (a - n·T) % T and (a + n·T) % T are the same remainder.
     'session\.rs:\d+:\d+: replace - with \+ in Session::frame',
+    # Only one rules version exists, so no replay can carry another one yet.
+    'flappy-replay/src/lib\.rs:\d+:\d+: replace Replay::rules_version -> u32 with 1',
 ]

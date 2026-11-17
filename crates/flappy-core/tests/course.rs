@@ -93,3 +93,47 @@ fn a_seed_lays_out_the_same_course_in_every_version_so_old_replays_stay_valid() 
         vec![59.662_598, 36.396_416, 41.144_043, 43.767_624, 31.521_206]
     );
 }
+
+#[test]
+fn a_scripted_game_ends_the_same_way_under_these_rules() {
+    // If this fails, the rules changed: bump flappy_core::RULES_VERSION so that replays
+    // recorded under the old rules are refused instead of misjudged, then update this test.
+    use flappy_core::{Bird, Config, Input, Phase, RULES_VERSION, World};
+
+    let config = Config::default();
+    let pilot = |world: &World| {
+        let next_gap = world
+            .pipes()
+            .find(|pipe| pipe.x + pipe.width >= config.bird_x - config.bird_radius)
+            .map_or(300.0, |pipe| pipe.gap.bottom - 30.0);
+        let bird = world.bird();
+        let flap = world.score() < 3 && bird.y > next_gap && bird.velocity >= 0.0;
+        if world.phase() == Phase::Ready || flap {
+            Input::Flap
+        } else {
+            Input::Idle
+        }
+    };
+    let (world, ticks) = (0..5_000_u32)
+        .try_fold((World::new(config, 42), 0_u32), |(world, ticks), _| {
+            if world.phase() == Phase::Over {
+                return Err((world, ticks));
+            }
+            Ok((world.step(pilot(&world)), ticks + 1))
+        })
+        .unwrap_or_else(|ended| ended);
+
+    assert_eq!(RULES_VERSION, 1);
+    assert_eq!(world.phase(), Phase::Over);
+    assert_eq!(
+        (world.score(), ticks, world.bird()),
+        (
+            3,
+            387,
+            Bird {
+                y: 388.0,
+                velocity: 0.0
+            }
+        )
+    );
+}

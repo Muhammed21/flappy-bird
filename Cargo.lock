@@ -191,6 +191,7 @@ name = "flappy-client"
 version = "0.1.0"
 dependencies = [
  "flappy-core",
+ "flappy-replay",
  "macroquad",
 ]
 
@@ -198,6 +199,14 @@ dependencies = [
 name = "flappy-core"
 version = "0.1.0"
 dependencies = [
+ "proptest",
+]
+
+[[package]]
+name = "flappy-replay"
+version = "0.1.0"
+dependencies = [
+ "flappy-core",
  "proptest",
 ]
 

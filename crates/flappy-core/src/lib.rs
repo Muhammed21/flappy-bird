@@ -6,6 +6,10 @@
 //!
 //! Units: logical pixels (y points down) and ticks of a fixed timestep.
 
+/// Bumped whenever a change to the rules or to `Config::default` would replay an old game
+/// differently. Replays carry it, and a replay made under other rules is refused.
+pub const RULES_VERSION: u32 = 1;
+
 mod course;
 mod random;
 mod world;

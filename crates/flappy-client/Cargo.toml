@@ -8,6 +8,7 @@ publish.workspace = true
 
 [dependencies]
 flappy-core.workspace = true
+flappy-replay.workspace = true
 macroquad.workspace = true
 
 [lints]
