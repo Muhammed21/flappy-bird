@@ -6,6 +6,7 @@ members = [
     "crates/flappy-storage",
     "crates/flappy-web-storage",
     "crates/flappy-client",
+    "crates/flappy-bench",
     "xtask",
 ]
 
@@ -21,7 +22,7 @@ flappy-replay = { path = "crates/flappy-replay" }
 flappy-storage = { path = "crates/flappy-storage" }
 flappy-web-storage = { path = "crates/flappy-web-storage" }
 serde = { version = "1.0.229", features = ["derive"] }
-macroquad = { version = "0.4.16", default-features = false }
+macroquad = { version = "0.4.16", default-features = false, features = ["audio"] }
 serde_json = "1.0.154"
 proptest = "1.12.0"
 

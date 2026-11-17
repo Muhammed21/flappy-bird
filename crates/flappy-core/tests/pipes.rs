@@ -119,3 +119,18 @@ fn a_bird_that_hits_a_pipe_stops_where_it_hit() {
         }
     );
 }
+
+#[test]
+fn the_course_has_not_scrolled_before_the_first_flap() {
+    assert_eq!(xs(&World::new(hovering(50.0), SEED)), vec![100.0]);
+    assert!(World::new(hovering(50.0), SEED).distance().abs() < f32::EPSILON);
+}
+
+#[test]
+fn the_distance_grows_by_the_scroll_speed_each_tick_and_stops_at_the_crash() {
+    assert!((after(hovering(50.0), 10).distance() - 20.0).abs() < f32::EPSILON);
+
+    let over = after(hovering(20.0), 38);
+    let later = run(over.clone(), &idle(10));
+    assert!((later.distance() - 76.0).abs() < f32::EPSILON);
+}

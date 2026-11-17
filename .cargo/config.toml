@@ -1,2 +1,8 @@
 [alias]
 xtask = "run --quiet --package xtask --"
+
+# quad-snd 0.2.8 declares its JS functions (web/audio.js) in an extern block without
+# #[link(wasm_import_module)], which recent rustc no longer links. These symbols, and only these,
+# may stay undefined and become imports. Drop this once a quad-snd release names its module.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=--allow-undefined-file=web/wasm-imports.txt"]

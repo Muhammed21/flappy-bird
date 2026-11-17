@@ -157,7 +157,8 @@ fn check_unsafe() -> Task {
     Err(format!("{} file(s) allow unsafe code", violations.len()))
 }
 
-fn miniquad_js() -> Result<PathBuf, String> {
+/// A JS file shipped inside a locked dependency (`gl.js` in miniquad, `audio.js` in quad-snd).
+fn dependency_js(package: &str, file: &str) -> Result<PathBuf, String> {
     let metadata: Value = serde_json::from_str(&cargo_output(&[
         "metadata",
         "--format-version",
@@ -173,13 +174,13 @@ fn miniquad_js() -> Result<PathBuf, String> {
         .and_then(|packages| {
             packages
                 .iter()
-                .find(|package| package.get("name").and_then(Value::as_str) == Some("miniquad"))
+                .find(|candidate| candidate.get("name").and_then(Value::as_str) == Some(package))
         })
         .and_then(|package| package.get("manifest_path").and_then(Value::as_str))
-        .ok_or("miniquad is not in the dependency graph")?;
+        .ok_or_else(|| format!("{package} is not in the dependency graph"))?;
     Path::new(manifest)
         .parent()
-        .map(|dir| dir.join("js").join("gl.js"))
+        .map(|dir| dir.join("js").join(file))
         .ok_or_else(|| format!("no folder for {manifest}"))
 }
 
@@ -208,7 +209,11 @@ fn wasm() -> Task {
             .join("flappy-client.wasm"),
         &dist.join("flappy-client.wasm"),
     )?;
-    copy(&miniquad_js()?, &dist.join("gl.js"))?;
+    copy(&dependency_js("miniquad", "gl.js")?, &dist.join("gl.js"))?;
+    copy(
+        &dependency_js("quad-snd", "audio.js")?,
+        &dist.join("audio.js"),
+    )?;
     copy(Path::new("web/index.html"), &dist.join("index.html"))?;
     copy(Path::new("web/boot.js"), &dist.join("boot.js"))?;
     copy(Path::new("web/storage.js"), &dist.join("storage.js"))?;

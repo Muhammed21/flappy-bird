@@ -14,7 +14,8 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -D warnings
+  # No RUSTFLAGS here: it would replace the wasm link flags in .cargo/config.toml. Clippy runs
+  # with -D warnings inside cargo xtask ci.
 
 jobs:
   verify:

@@ -1,4 +1,4 @@
-use flappy_client::{MAX_TICKS_PER_FRAME, RESTART_DELAY_TICKS, Session, TICK_SECONDS};
+use flappy_client::{Events, MAX_TICKS_PER_FRAME, RESTART_DELAY_TICKS, Session, TICK_SECONDS};
 use flappy_core::{Config, Input, Phase, World};
 
 const SEED: u64 = 7;
@@ -160,4 +160,60 @@ fn a_new_game_starts_a_new_recording() {
     let restarted = over.frame(TICK_SECONDS, true);
 
     assert_eq!(restarted.replay(), None);
+}
+
+fn hovering() -> Config {
+    let config = Config::default();
+    Config {
+        gravity: 0.0,
+        flap_velocity: 0.0,
+        course: flappy_core::CourseConfig {
+            gap_center_min: config.start_y,
+            gap_center_max: config.start_y,
+            ..config.course
+        },
+        ..config
+    }
+}
+
+#[test]
+fn a_frame_reports_a_flap_once_a_tick_applies_it() {
+    let pressed = session().frame(TICK_SECONDS / 2.0, true);
+    let applied = pressed.clone().frame(TICK_SECONDS / 2.0, false);
+    let after = applied.clone().frame(TICK_SECONDS, false);
+
+    assert_eq!(pressed.events(), Events::default());
+    assert!(applied.events().flapped);
+    assert_eq!(after.events(), Events::default());
+}
+
+#[test]
+fn a_frame_reports_the_crash_once() {
+    let over = game_over().unwrap();
+    let later = over.clone().frame(TICK_SECONDS, false);
+
+    assert!(over.events().crashed);
+    assert!(!later.events().crashed);
+}
+
+#[test]
+fn a_frame_reports_a_point_when_the_score_goes_up() {
+    let frames = std::iter::successors(
+        Some(Session::new(hovering(), SEED).frame(TICK_SECONDS, true)),
+        |session| Some(session.clone().frame(TICK_SECONDS, false)),
+    )
+    .take(400);
+    let scoring: Vec<u32> = frames
+        .filter(|session| session.events().scored)
+        .map(|session| session.world().score())
+        .collect();
+
+    assert_eq!(scoring, vec![1, 2, 3]);
+}
+
+#[test]
+fn the_flap_that_restarts_a_game_is_not_a_flap_of_the_new_game() {
+    let over = idle_frames(game_over().unwrap(), RESTART_DELAY_TICKS as usize);
+
+    assert_eq!(over.frame(TICK_SECONDS, true).events(), Events::default());
 }

@@ -11,6 +11,14 @@ pub const RESTART_DELAY_TICKS: u32 = 30;
 /// Rounding slack so that a frame of exactly `n` ticks runs `n` ticks.
 const TICK_EPSILON: f64 = 1e-9;
 
+/// What happened during the last frame, for sounds and effects.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Events {
+    pub flapped: bool,
+    pub scored: bool,
+    pub crashed: bool,
+}
+
 /// One sitting at the game: the current world, the one a tick before (to interpolate), the
 /// time not yet spent on a tick, and a flap waiting for the next tick.
 #[derive(Clone, Debug, PartialEq)]
@@ -23,6 +31,7 @@ pub struct Session {
     pending_flap: bool,
     ticks_over: u32,
     recorder: Recorder,
+    events: Events,
 }
 
 impl Session {
@@ -38,6 +47,7 @@ impl Session {
             pending_flap: false,
             ticks_over: 0,
             recorder: Recorder::new(seed),
+            events: Events::default(),
         }
     }
 
@@ -49,6 +59,12 @@ impl Session {
     #[must_use]
     pub fn previous(&self) -> &World {
         &self.previous
+    }
+
+    /// What happened during the last frame.
+    #[must_use]
+    pub fn events(&self) -> Events {
+        self.events
     }
 
     /// The finished game's replay, once it is over.
@@ -84,6 +100,7 @@ impl Session {
         let waiting = Self {
             accumulated,
             pending_flap: self.pending_flap || flap,
+            events: Events::default(),
             ..self
         };
         (0..ticks).fold(waiting, |session, _| session.tick())
@@ -103,11 +120,18 @@ impl Session {
             },
             Phase::Ready | Phase::Playing => {
                 let input = if flap { Input::Flap } else { Input::Idle };
+                let world = self.world.step(input);
+                let events = Events {
+                    flapped: self.events.flapped || flap,
+                    scored: self.events.scored || world.score() > self.world.score(),
+                    crashed: self.events.crashed || world.phase() == Phase::Over,
+                };
                 Self {
                     previous: self.world.clone(),
-                    world: self.world.step(input),
+                    world,
                     pending_flap: false,
                     recorder: self.recorder.record(input),
+                    events,
                     ..self
                 }
             }

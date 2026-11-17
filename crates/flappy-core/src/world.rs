@@ -131,6 +131,16 @@ impl World {
         self.score
     }
 
+    /// How far the course has scrolled since the first flap.
+    #[must_use]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "exact for the first 16 million ticks"
+    )]
+    pub fn distance(&self) -> f32 {
+        self.ticks as f32 * self.config.scroll_speed
+    }
+
     /// The pipes on screen, left to right. Allocates nothing.
     pub fn pipes(&self) -> impl Iterator<Item = Pipe> + '_ {
         let first = (0..self.score)
@@ -152,13 +162,9 @@ impl World {
         }
     }
 
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "exact for the first 16 million ticks"
-    )]
     fn pipe(&self, index: u32) -> Pipe {
         Pipe {
-            x: self.course.pipe_x(index) - self.ticks as f32 * self.config.scroll_speed,
+            x: self.course.pipe_x(index) - self.distance(),
             width: self.course.config().pipe_width,
             gap: self.course.gap(index),
         }

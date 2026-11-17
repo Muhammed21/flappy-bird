@@ -6,4 +6,7 @@ exclude_re = [
     'session\.rs:\d+:\d+: replace - with \+ in Session::frame',
     # Only one rules version exists, so no replay can carry another one yet.
     'flappy-replay/src/lib\.rs:\d+:\d+: replace Replay::rules_version -> u32 with 1',
+    # The sine of a phase kept within one turn, or not, or turning backwards, sounds the same.
+    'sound\.rs:\d+:\d+: replace % with \+ in Tone::samples',
+    'sound\.rs:\d+:\d+: replace \+ with - in Tone::samples',
 ]

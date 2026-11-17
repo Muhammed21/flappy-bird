@@ -1,0 +1,22 @@
+[package]
+name = "flappy-bench"
+description = "Benchmarks: a game tick, verifying a replay, loading a save. cargo bench -p flappy-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+flappy-core.workspace = true
+flappy-replay.workspace = true
+
+[dev-dependencies]
+flappy-storage.workspace = true
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "game"
+harness = false
+
+[lints]
+workspace = true

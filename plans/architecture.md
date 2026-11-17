@@ -115,7 +115,7 @@ Chaque étape = un commit validé par toi avant de passer à la suivante.
 - [x] 4. Client minimal jouable (desktop + navigateur)
 - [x] 5. Replay + validation de score (`flappy-replay`, `RULES_VERSION`)
 - [x] 6. Stockage sécurisé du high score (fichier atomique + localStorage, rejoué au chargement)
-- [ ] 7. Bench + polish
+- [x] 7. Bench + polish (criterion, oiseau incliné, tuyaux, sol défilant, nuages, sons générés)
 
 ## Risques acceptés
 
