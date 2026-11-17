@@ -1,0 +1,11 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+
+disallowed-methods = [
+    { path = "std::time::Instant::now", reason = "panics on wasm32-unknown-unknown and breaks determinism: the core counts ticks, the client uses macroquad::time" },
+    { path = "std::time::SystemTime::now", reason = "panics on wasm32-unknown-unknown and breaks determinism" },
+    { path = "std::thread::spawn", reason = "no threads on wasm32-unknown-unknown" },
+    { path = "std::thread::sleep", reason = "blocks the browser's event loop on wasm32-unknown-unknown; let the frame loop pace itself" },
+]

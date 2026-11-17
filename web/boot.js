@@ -1,0 +1,1 @@
+load("flappy-client.wasm");

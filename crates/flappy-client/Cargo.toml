@@ -1,0 +1,13 @@
+[package]
+name = "flappy-client"
+description = "The playable game: window, rendering, input, sound. Desktop and WASM."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+macroquad.workspace = true
+
+[lints]
+workspace = true
