@@ -1,26 +1,10 @@
-use flappy_core::{Bird, Config, Input, Phase, World};
+mod support;
 
-fn config() -> Config {
-    Config {
-        gravity: 1.0,
-        flap_velocity: -5.0,
-        max_fall_speed: 3.0,
-        bird_radius: 5.0,
-        start_y: 50.0,
-        ground_y: 100.0,
-    }
-}
+use flappy_core::{Bird, Input, Phase, World};
+use support::{SEED, config, idle, run};
 
 fn world() -> World {
-    World::new(config())
-}
-
-fn run(world: World, inputs: &[Input]) -> World {
-    inputs.iter().fold(world, |world, input| world.step(*input))
-}
-
-fn idle(ticks: usize) -> Vec<Input> {
-    vec![Input::Idle; ticks]
+    World::new(config(), SEED)
 }
 
 fn playing() -> World {
